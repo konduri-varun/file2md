@@ -79,7 +79,7 @@ def group_transcript(transcript, group_seconds=45):
     return '\n\n'.join(paragraphs)
 
 
-def app(environ, start_response):
+def handle_wsgi_request(environ, start_response):
     if environ['REQUEST_METHOD'] != 'POST':
         return send_json(start_response, {'error': 'Method not allowed. Use POST.'}, 405)
     try:
@@ -134,7 +134,7 @@ class handler(BaseHTTPRequestHandler):
             status_headers['status'] = status
             status_headers['headers'] = headers
 
-        chunks = app(environ, start_response)
+        chunks = handle_wsgi_request(environ, start_response)
         status = int(status_headers.get('status', '200 OK').split()[0])
         headers = dict(status_headers.get('headers', []))
         body = b''.join(chunks)
