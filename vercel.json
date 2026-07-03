@@ -1,6 +1,9 @@
 {
   "functions": {
-    "api/convert.py": { "maxDuration": 60 },
-    "api/convert-youtube.py": { "maxDuration": 30 }
-  }
+    "api/index.py": { "maxDuration": 60 }
+  },
+  "rewrites": [
+    { "source": "/api/convert", "destination": "/api" },
+    { "source": "/api/convert-youtube", "destination": "/api" }
+  ]
 }
