@@ -18,6 +18,7 @@ interface ConvertResult {
 }
 
 const ACCEPT = ".pdf,.docx,.pptx,.xlsx,.csv,.jpg,.jpeg,.png,.webp";
+const BUILD_VERSION = "api-handler-v3";
 
 function fmt(n: number) {
   return n.toLocaleString();
@@ -190,6 +191,10 @@ export default function Home() {
           )}
         </button>
       </header>
+
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+        Build: {BUILD_VERSION} &middot; API health: <code>/api/health</code>
+      </div>
 
       {!result && (
         <>
