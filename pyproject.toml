@@ -2,7 +2,11 @@
 name = "md-converter-api"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "markitdown[pdf,docx,pptx,xlsx]==0.0.1a3",
+    "tiktoken==0.7.0",
+    "python-multipart==0.0.9",
+]
 
 [tool.vercel]
 entrypoint = "api.convert:app"
