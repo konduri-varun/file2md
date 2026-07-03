@@ -1,5 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/api/convert", "destination": "/api" }
-  ]
+  "rewrites": [{ "source": "/api/convert", "destination": "/api" }]
 }

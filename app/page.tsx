@@ -67,8 +67,10 @@ export default function Home() {
         return;
       }
       setResult(data);
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("API error:", e);
+      setError(`Network error: ${msg}`);
     } finally {
       setLoading(false);
     }
