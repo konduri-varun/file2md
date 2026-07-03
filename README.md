@@ -32,7 +32,6 @@ Convert files and YouTube URLs to Markdown with token-count comparison. Built wi
 ```
 markitdown[pdf,docx,pptx,xlsx]==0.0.1a3
 tiktoken==0.7.0
-python-multipart==0.0.9
 openai==1.35.0
 youtube-transcript-api==0.6.2
 ```
