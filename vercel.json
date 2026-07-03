@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/api/convert", "destination": "/api" }]
+  "functions": {
+    "api/convert.py": { "maxDuration": 60 },
+    "api/convert-youtube.py": { "maxDuration": 30 }
+  }
 }
