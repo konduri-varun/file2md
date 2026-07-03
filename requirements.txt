@@ -1,4 +1,2 @@
 markitdown[pdf,docx,pptx,xlsx]==0.0.1a3
 tiktoken==0.7.0
-openai==1.35.0
-youtube-transcript-api==0.6.2

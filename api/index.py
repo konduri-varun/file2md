@@ -4,6 +4,9 @@ import re
 import base64
 import tempfile
 import urllib.parse
+import urllib.request
+import ssl
+import html
 
 
 ALLOWED_EXTENSIONS = {
@@ -119,26 +122,32 @@ def describe_image(image_bytes, mime_type):
         return None, 'NVIDIA_API_KEY environment variable not set'
 
     try:
-        from openai import OpenAI
-        client = OpenAI(
-            base_url='https://integrate.api.nvidia.com/v1',
-            api_key=api_key,
-        )
         b64 = base64.b64encode(image_bytes).decode('utf-8')
         data_uri = f'data:{mime_type};base64,{b64}'
-        response = client.chat.completions.create(
-            model='meta/llama-3.2-90b-vision-instruct',
-            messages=[{
+        payload = json.dumps({
+            'model': 'meta/llama-3.2-90b-vision-instruct',
+            'messages': [{
                 'role': 'user',
                 'content': [
                     {'type': 'text', 'text': 'Describe this image in detail in Markdown format.'},
                     {'type': 'image_url', 'image_url': {'url': data_uri}},
                 ],
             }],
-            max_tokens=1024,
+            'max_tokens': 1024,
+        }).encode()
+        req = urllib.request.Request(
+            'https://integrate.api.nvidia.com/v1/chat/completions',
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+            },
         )
-        text = response.choices[0].message.content
-        return text, None
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            result = json.loads(resp.read().decode())
+            text = result['choices'][0]['message']['content']
+            return text, None
     except Exception as e:
         return None, f'{type(e).__name__}: {e}'
 
@@ -207,7 +216,7 @@ def handle_convert(environ, start_response):
 
             try:
                 from markitdown import MarkItDown
-                md_engine = MarkItDown(enable_plugins=False)
+                md_engine = MarkItDown()
                 result_obj = md_engine.convert(tmp_path)
                 markdown_text = result_obj.text_content
             except Exception as e:
@@ -310,6 +319,40 @@ def group_transcript(transcript, group_seconds=45):
     return '\n\n'.join(paragraphs)
 
 
+def fetch_youtube_transcript(video_id):
+    url = f'https://www.youtube.com/watch?v={video_id}'
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+    })
+    ctx = ssl.create_default_context()
+    with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+        page = resp.read().decode('utf-8', errors='replace')
+    m = re.search(r'"captions":\s*(\{.*?"playerCaptionsTracklistRenderer".*?\})\s*,\s*"videoDetails"', page, re.DOTALL)
+    if not m:
+        m = re.search(r'"captionTracks":\s*(\[.*?\])', page)
+        if m:
+            tracks = json.loads(m.group(1))
+            if tracks:
+                caption_url = tracks[0].get('baseUrl', '')
+                if caption_url:
+                    req2 = urllib.request.Request(caption_url, headers={
+                        'User-Agent': 'Mozilla/5.0',
+                    })
+                    with urllib.request.urlopen(req2, context=ctx, timeout=15) as resp2:
+                        xml_data = resp2.read().decode('utf-8', errors='replace')
+                    entries = []
+                    for match in re.finditer(r'<text start="([^"]*)" dur="([^"]*)"[^>]*>(.*?)</text>', xml_data):
+                        start = float(match.group(1))
+                        text = html.unescape(match.group(3)).replace('\n', ' ').strip()
+                        if text:
+                            entries.append({'start': start, 'text': text})
+                    return entries
+    if 'captionTracks' in page:
+        raise Exception('Could not parse caption tracks from page')
+    raise Exception('No transcript data found on page')
+
+
 def handle_youtube(environ, start_response):
     try:
         content_length = int(environ.get('CONTENT_LENGTH', 0) or 0)
@@ -331,18 +374,14 @@ def handle_youtube(environ, start_response):
             })
 
         try:
-            from youtube_transcript_api import YouTubeTranscriptApi
-            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript = fetch_youtube_transcript(video_id)
         except Exception as e:
-            err_cls = type(e).__name__
-            err_msg = str(e)
-            if 'TranscriptsDisabled' in err_cls or 'TranscriptsDisabled' in err_msg:
+            err_msg = str(e).lower()
+            if 'transcript' in err_msg and ('disabled' in err_msg or 'not available' in err_msg):
                 return send_json(start_response, {'error': 'This video has captions disabled'})
-            if 'NoTranscriptFound' in err_cls or 'No transcript found' in err_msg:
-                return send_json(start_response, {'error': 'No transcript available for this video'})
-            if 'VideoUnavailable' in err_cls or 'Video unavailable' in err_msg:
+            if 'unavailable' in err_msg or 'private' in err_msg or '404' in err_msg:
                 return send_json(start_response, {'error': 'This video is private or unavailable'})
-            return send_json(start_response, {'error': f'{err_cls}: {err_msg}'})
+            return send_json(start_response, {'error': f'{type(e).__name__}: {e}'})
 
         raw_text = '\n'.join(e.get('text', '') for e in transcript if e.get('text'))
         formatted = group_transcript(transcript)
