@@ -72,7 +72,7 @@ Without `NVIDIA_API_KEY`, image uploads will still convert (MarkItDown handles m
 
 ### Vercel Plan Notes
 
-The `vercel.json` sets `maxDuration: 60` for `api/convert.py` and `maxDuration: 30` for `api/convert-youtube.py`. On the Hobby (free) plan, the function timeout is capped at 10 seconds regardless of this setting. Extended durations require a Pro plan.
+The `vercel.json` sets `maxDuration: 60` for `api/index.py`. On the Hobby (free) plan, the function timeout is capped at 10 seconds regardless of this setting. Extended durations require a Pro plan.
 
 ## Input Support
 
@@ -95,8 +95,7 @@ The `vercel.json` sets `maxDuration: 60` for `api/convert.py` and `maxDuration: 
 │   ├── layout.tsx    Root layout with dark mode FOUC prevention
 │   └── globals.css   Tailwind directives
 ├── api/
-│   ├── convert.py         Python — file upload handler (MarkItDown, tiktoken, NVIDIA vision)
-│   └── convert-youtube.py Python — YouTube transcript fetcher (youtube-transcript-api, tiktoken)
+│   └── index.py            Python — dispatcher for file + YouTube routes
 ├── requirements.txt
 ├── vercel.json       Function maxDuration config
 ├── package.json
@@ -107,6 +106,8 @@ The `vercel.json` sets `maxDuration: 60` for `api/convert.py` and `maxDuration: 
 
 - **`POST /api/convert`** — Upload a file via `multipart/form-data` with field name `file`. Returns JSON with markdown text and token counts.
 - **`POST /api/convert-youtube`** — Send `{"url": "..."}` as JSON body. Returns JSON with formatted transcript and token counts.
+
+Both endpoints are served by a single `api/index.py` WSGI app (Vercel auto-detects `index.py` at `/api`). Rewrite rules in `vercel.json` route `/api/convert` and `/api/convert-youtube` to `/api`, while `vercel.json` also sets `maxDuration: 60`.
 
 Both endpoints return `{"error": "..."}` on failure (always HTTP 200).
 
@@ -120,7 +121,7 @@ The reduction percentage shows how much smaller the markdown representation is c
 
 ### NVIDIA Vision Model
 
-Image description uses `meta/llama-3.2-90b-vision-instruct` via NVIDIA's API. **Verify the exact model ID at [build.nvidia.com/models](https://build.nvidia.com/models) before relying on this** — NVIDIA periodically renames/updates their model catalog. Update the model ID in `api/convert.py:describe_image()` accordingly.
+Image description uses `meta/llama-3.2-90b-vision-instruct` via NVIDIA's API. **Verify the exact model ID at [build.nvidia.com/models](https://build.nvidia.com/models) before relying on this** — NVIDIA periodically renames/updates their model catalog. Update the model ID in `api/index.py:describe_image()` accordingly.
 
 ## Known Limitations
 

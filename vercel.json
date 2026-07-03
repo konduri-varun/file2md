@@ -1,7 +1,4 @@
 {
-  "functions": {
-    "api/index.py": { "maxDuration": 60 }
-  },
   "rewrites": [
     { "source": "/api/convert", "destination": "/api" },
     { "source": "/api/convert-youtube", "destination": "/api" }
