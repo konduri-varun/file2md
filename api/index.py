@@ -69,19 +69,6 @@ def parse_multipart(environ):
     if content_length > MAX_SIZE:
         return None, 'File too large. Maximum size is 10MB.'
 
-    try:
-        from multipart import parse_form_data
-        form, files = parse_form_data(environ)
-        if 'file' not in files:
-            return None, 'No file field found. Use form field name "file".'
-        uploaded = files['file']
-        content = uploaded.read()
-        if len(content) > MAX_SIZE:
-            return None, 'File too large. Maximum size is 10MB.'
-        return (uploaded.filename, content), None
-    except Exception:
-        pass
-
     boundary = None
     for part in content_type.split(';'):
         part = part.strip()
