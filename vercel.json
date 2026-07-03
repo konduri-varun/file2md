@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/convert", "destination": "/api" },
-    { "source": "/api/convert-youtube", "destination": "/api" }
-  ]
-}

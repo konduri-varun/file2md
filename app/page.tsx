@@ -23,6 +23,21 @@ function fmt(n: number) {
   return n.toLocaleString();
 }
 
+async function parseApiResponse(res: Response): Promise<ConvertResult> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as ConvertResult;
+  } catch {
+    return {
+      error: `API returned non-JSON response (${res.status}): ${text.slice(0, 180)}`,
+      markdown: "",
+      original_token_count: 0,
+      markdown_token_count: 0,
+      reduction_percent: 0,
+    };
+  }
+}
+
 export default function Home() {
   const [mode, setMode] = useState<InputMode>("file");
   const [file, setFile] = useState<File | null>(null);
@@ -66,7 +81,7 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/convert", { method: "POST", body: fd });
-      const data: ConvertResult = await res.json();
+      const data = await parseApiResponse(res);
       if (data.error) {
         setError(data.error);
         return;
@@ -93,7 +108,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: ytUrl.trim() }),
       });
-      const data: ConvertResult = await res.json();
+      const data = await parseApiResponse(res);
       if (data.error) {
         setError(data.error);
         return;
